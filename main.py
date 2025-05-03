@@ -1,8 +1,7 @@
 import pygame
-from settings import *
-from rays import *
-from visuals import *
-from utils import show_text
+from settings import WIDTH, HEIGHT, FPS
+from raycaster import Raycaster
+from lighting import LightingEffect
 
 
 def main():
@@ -13,62 +12,36 @@ def main():
     obstacles = [
         pygame.Rect(200, 150, 300, 30),
         pygame.Rect(100, 300, 30, 200),
-        pygame.Rect(500, 350, 150, 30)
+        pygame.Rect(500, 350, 150, 30),
+        pygame.Rect(300, 250, 40, 100),
+        pygame.Rect(600, 100, 50, 150),
+        pygame.Rect(50, 100, 120, 40),
+        pygame.Rect(700, 400, 60, 120),
+        pygame.Rect(350, 450, 200, 30),
+        pygame.Rect(400, 100, 80, 80)
     ]
 
-    num_rays = NUM_RAYS
-    ray_step = RAY_STEP
-    current_mode = MODE_RAYS
-    show_obstacles = True
+    lighting = LightingEffect()
 
     running = True
     while running:
-        screen.fill("black")
-        draw_obstacles(screen, obstacles, show_obstacles)
-
-        mouse_x, mouse_y = pygame.mouse.get_pos()
-        player_pos = pygame.Vector2(mouse_x, mouse_y)
-        pygame.draw.circle(screen, (0, 255, 0), player_pos, 5)
-
-        # Events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_m:
-                    current_mode = (current_mode + 1) % 2
-                elif event.key == pygame.K_RIGHT:
-                    num_rays = min(360, num_rays + 10)
-                elif event.key == pygame.K_LEFT:
-                    num_rays = max(10, num_rays - 10)
-                elif event.key == pygame.K_o:
-                    show_obstacles = not show_obstacles
-                elif event.key == pygame.K_UP:
-                    ray_step = max(1, ray_step + 1)
-                elif event.key == pygame.K_DOWN:
-                    ray_step = max(1, ray_step - 1)
 
-        directions = generate_directions(num_rays)
-        points = get_light_polygon(player_pos, directions, obstacles)
+        screen.fill("black")
 
-        if current_mode == MODE_RAYS:
-            draw_rays(screen, player_pos, directions, obstacles, cast_ray)
-        elif current_mode == MODE_EXACT_POLYGON:
-            draw_polygon(screen, points)
+        player_pos = pygame.Vector2(pygame.mouse.get_pos())
+        edges = Raycaster.get_all_edges(obstacles)
+        points = Raycaster.find_all_intersects(player_pos, edges)
 
-        pygame.draw.circle(screen, "red", pygame.mouse.get_pos(), 4)
+        lighting.update(player_pos, points)
+        lighting.draw(screen)
 
-        # UI
-        mode_text = "Ray Mode" if current_mode == MODE_RAYS else "Exact Polygon"
-        show_text(screen, f"FPS: {clock.get_fps():.1f}")
-        show_text(screen, f"Rays: {num_rays}", y=35)
-        show_text(screen, f"Ray Step: {ray_step}", y=60)
-        show_text(screen, f"Mode: {mode_text}", y=100)
+        pygame.draw.circle(screen, (0, 0, 255), player_pos, 2)
 
-        show_text(screen, "O to toggle object visibility", y=screen.get_height()-120)
-        show_text(screen, "M to toggle mode", y=screen.get_height()-90)
-        show_text(screen, "Up/Down arrow keys to increase/decrease ray step", y=screen.get_height()-60)
-        show_text(screen, "Left/Right arow keys to increase/decrease number of rays", y=screen.get_height()-30)
+        for obstacle in obstacles:
+            pygame.draw.rect(screen, (255, 0, 0), obstacle)
 
         pygame.display.flip()
         clock.tick(FPS)
