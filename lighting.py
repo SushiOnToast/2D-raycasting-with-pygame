@@ -3,11 +3,9 @@ from settings import WINDOW_SIZE
 
 class LightingEffect:
     def __init__(self):
-        self.effect_size = (500, 500)
-        self.light_effect = pygame.Surface(self.effect_size)
-        self.light_effect.fill((0, 0, 0))
-        pygame.draw.circle(self.light_effect, (255, 255, 255), (self.effect_size[0] // 2, self.effect_size[1] // 2), 250)
-        self.light_effect.set_alpha(255)
+        
+        self.light_effect = pygame.transform.scale_by(pygame.image.load("./light_effect.png").convert_alpha(), 0.75)
+        self.effect_size = self.light_effect.get_size()
         self.mouse_pos = None
         self.polygon = []
 
