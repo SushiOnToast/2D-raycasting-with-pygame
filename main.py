@@ -11,7 +11,9 @@ def main():
 
     grid_obstacles = []
 
-    lighting = LightingEffect() 
+    lighting = LightingEffect()
+
+    dragging = False  # Track whether the mouse is being held down
 
     running = True
     while running:
@@ -20,14 +22,22 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:  # Left mouse click
-                    mouse_x, mouse_y = pygame.mouse.get_pos()
-                    # Snap click to nearest grid cell
-                    grid_x = (mouse_x // GRID_SIZE) * GRID_SIZE
-                    grid_y = (mouse_y // GRID_SIZE) * GRID_SIZE
-                    grid_obstacles.append(pygame.Rect(grid_x, grid_y, GRID_SIZE, GRID_SIZE))
+                if event.button == 1:
+                    dragging = True  # Start dragging
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    dragging = False  # Stop dragging
 
-        screen.fill("black")  
+        if dragging:
+            # Add tile under mouse position during drag
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            grid_x = (mouse_x // GRID_SIZE) * GRID_SIZE
+            grid_y = (mouse_y // GRID_SIZE) * GRID_SIZE
+            new_tile = pygame.Rect(grid_x, grid_y, GRID_SIZE, GRID_SIZE)
+            if new_tile not in grid_obstacles:
+                grid_obstacles.append(new_tile)
+
+        screen.fill("black")
 
         all_relevant_edges = get_all_relevant_edges(grid_obstacles, Raycaster.get_edges)
 
@@ -40,17 +50,16 @@ def main():
         for obstacle in grid_obstacles:
             pygame.draw.rect(screen, (0, 0, 0), obstacle)
 
-        # Update lighting polygon based on new intersections and draw it
         lighting.update(player_pos, points)
         lighting.draw(screen)
 
         for i, edge in enumerate(all_relevant_edges):
             pygame.draw.line(screen, (0, 255, 255), edge[0], edge[1], 3)
 
-        pygame.display.flip()  
-        clock.tick(FPS)        
+        pygame.display.flip()
+        clock.tick(FPS)
 
-    pygame.quit()  
+    pygame.quit()
 
 
 if __name__ == "__main__":
