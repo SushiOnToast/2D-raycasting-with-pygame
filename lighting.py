@@ -21,6 +21,8 @@ class LightingEffect:
             new_surface.fill((0, 0, 0))
             if self.polygon:
                 pygame.draw.polygon(new_surface, (0, 255, 0), self.polygon)
+                # for point in self.polygon:
+                #     pygame.draw.line(new_surface, (0, 255, 0), self.mouse_pos, point)
             new_surface.set_colorkey((0, 255, 0))
 
             effect_pos = (self.mouse_pos[0] - self.effect_size[0] // 2,
