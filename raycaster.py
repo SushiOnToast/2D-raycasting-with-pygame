@@ -27,16 +27,18 @@ class Raycaster:
             ((x, y + h), (x, y))              # Left edge
         ]
     
+
     @staticmethod
     def find_intersect(edges, ray):
         """
         Find the closest intersection point between a ray and a list of edges.
-        Returns the closest intersection point or None if no intersection found.
+        Improved version with better precision handling and corner cases.
         """
         origin, direction = ray
         r_px, r_py = origin.x, origin.y
         r_dx, r_dy = direction.x, direction.y
 
+        EPSILON = 1e-10  # Small value for floating point comparisons
         closest_t1 = float("inf")
         closest_point = None
 
@@ -45,21 +47,40 @@ class Raycaster:
             s_dx = s2[0] - s_px
             s_dy = s2[1] - s_py
 
-            denom = s_dx * r_dy - s_dy * r_dx  # Cross product to check for parallel lines
-            if denom == 0:
-                continue  # Lines are parallel and won't intersect
+            # Calculate determinant for intersection
+            denom = s_dx * r_dy - s_dy * r_dx
 
-            # Solving for intersection point using parametric equations
+            # Skip if lines are parallel (near zero determinant)
+            if abs(denom) < EPSILON:
+                continue
+
+            # Calculate intersection parameters
             t2 = (r_dx * (s_py - r_py) + r_dy * (r_px - s_px)) / denom
-            t1 = (s_px + s_dx * t2 - r_px) / r_dx if r_dx != 0 else (s_py + s_dy * t2 - r_py) / r_dy
+            
+            # Skip if intersection is outside the edge segment
+            if t2 < -EPSILON or t2 > 1 + EPSILON:
+                continue
 
-            # Check if intersection is valid
-            if t1 > 0 and 0 <= t2 <= 1:
-                if t1 < closest_t1:
-                    closest_t1 = t1
-                    closest_point = pygame.Vector2(r_px + r_dx * t1, r_py + r_dy * t1)
+            # Calculate t1 more robustly by choosing the more numerically stable calculation
+            if abs(r_dx) > abs(r_dy):
+                t1 = (s_px + s_dx * t2 - r_px) / r_dx
+            else:
+                t1 = (s_py + s_dy * t2 - r_py) / r_dy
+
+            # Skip if intersection is behind the ray origin
+            if t1 < EPSILON:
+                continue
+
+            # Update closest intersection if this one is closer
+            if t1 < closest_t1:
+                closest_t1 = t1
+                # Use precise intersection calculation
+                px = s_px + s_dx * t2
+                py = s_py + s_dy * t2
+                closest_point = pygame.Vector2(px, py)
 
         return closest_point
+
 
     @staticmethod
     def get_unique_points(edges):
@@ -79,26 +100,52 @@ class Raycaster:
     @staticmethod
     def find_all_intersects(origin, edges):
         """
-        Cast rays from the origin toward every unique edge point (plus small offsets),
-        and collect the resulting intersection points.
-        Sorts points by angle to prepare for polygon drawing.
+        Cast rays from the origin toward every unique edge point and corner.
+        Improved version with better corner handling and more precise angles.
         """
-        epsilon = 0.00001  # Small offset to cast slightly left and right of points to avoid gaps
         points = []
-
+        EPSILON = 0.0001  # Smaller epsilon for tighter ray spread
         unique_points = Raycaster.get_unique_points(edges)
+
+        def add_ray_at_angle(angle):
+            direction = pygame.Vector2(math.cos(angle), math.sin(angle))
+            ray = (origin, direction)
+            intersection = Raycaster.find_intersect(edges, ray)
+            if intersection:
+                points.append(intersection)
+
+        # Cast rays to all unique points
         for px, py in unique_points:
-            angle = math.atan2(py - origin.y, px - origin.x)
+            base_angle = math.atan2(py - origin.y, px - origin.x)
+            
+            # Cast 5 rays around each corner point for better coverage
+            angles = [
+                base_angle,  # Direct ray
+                base_angle - EPSILON,  # Slightly left
+                base_angle + EPSILON,  # Slightly right
+                base_angle - 2 * EPSILON,  # Further left
+                base_angle + 2 * EPSILON,  # Further right
+            ]
+            
+            for angle in angles:
+                add_ray_at_angle(angle)
 
-            # Cast 3 rays per point: directly, slightly left, and slightly right
-            for offset in [0, -epsilon, epsilon]:
-                a = angle + offset
-                direction = pygame.Vector2(math.cos(a), math.sin(a))
-                ray = (origin, direction)
-                intersection = Raycaster.find_intersect(edges, ray)
-                if intersection:
-                    points.append(intersection)
+        # Sort points by angle for proper polygon rendering
+        # Use a more precise sorting method
+        def get_angle(point):
+            dx = point.x - origin.x
+            dy = point.y - origin.y
+            angle = math.atan2(dy, dx)
+            return angle if angle >= 0 else angle + 2 * math.pi
 
-        # Sort points counter-clockwise for drawing polygon
-        points.sort(key=lambda p: math.atan2(p.y - origin.y, p.x - origin.x))
-        return points
+        points.sort(key=get_angle)
+        
+        # Remove duplicate points that are very close to each other
+        filtered_points = []
+        for i, point in enumerate(points):
+            if not filtered_points or (point - filtered_points[-1]).length() > EPSILON:
+                filtered_points.append(point)
+
+        return filtered_points
+    
+    
