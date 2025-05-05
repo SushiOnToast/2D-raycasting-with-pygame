@@ -14,6 +14,7 @@ def main():
     lighting = LightingEffect()
 
     dragging = False  # Track whether the mouse is being held down
+    solid_mode = False
 
     running = True
     while running:
@@ -27,6 +28,9 @@ def main():
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     dragging = False  # Stop dragging
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:  # Toggle solid mode with spacebar
+                    solid_mode = not solid_mode
 
         if dragging:
             # Add tile under mouse position during drag
@@ -47,11 +51,20 @@ def main():
 
         pygame.draw.circle(screen, (0, 0, 255), player_pos, 2)
 
-        for obstacle in grid_obstacles:
-            pygame.draw.rect(screen, (0, 0, 0), obstacle)
+        if solid_mode:
+            lighting.update(player_pos, points)
+            lighting.draw(screen)
 
-        lighting.update(player_pos, points)
-        lighting.draw(screen)
+            mode_color = (255, 0, 0) if solid_mode else (0, 0, 0)
+            for obstacle in grid_obstacles:
+                pygame.draw.rect(screen, mode_color, obstacle)
+        else:
+            mode_color = (255, 0, 0) if solid_mode else (0, 0, 0)
+            for obstacle in grid_obstacles:
+                pygame.draw.rect(screen, mode_color, obstacle)
+
+            lighting.update(player_pos, points)
+            lighting.draw(screen)
 
         for i, edge in enumerate(all_relevant_edges):
             pygame.draw.line(screen, (0, 255, 255), edge[0], edge[1], 3)
