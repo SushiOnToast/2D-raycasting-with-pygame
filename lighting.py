@@ -13,18 +13,22 @@ class LightingEffect:
         self.mouse_pos = mouse_pos
         self.polygon = polygon
 
-    def draw(self, surface):
+    def draw(self, surface, circle):
         if self.mouse_pos is not None:
             new_surface = pygame.Surface(WINDOW_SIZE)
             new_surface.fill((0, 0, 0))
             if self.polygon:
-                pygame.draw.polygon(new_surface, (0, 255, 0), self.polygon)
+                if not circle:
+                    color = (255, 255, 255)
+                else:
+                    color = (0, 255, 0)
+                pygame.draw.polygon(new_surface, color, self.polygon)
                 # for point in self.polygon:
                 #     pygame.draw.line(new_surface, (0, 255, 0), self.mouse_pos, point)
             new_surface.set_colorkey((0, 255, 0))
 
             effect_pos = (self.mouse_pos[0] - self.effect_size[0] // 2,
                           self.mouse_pos[1] - self.effect_size[1] // 2)
-
-            surface.blit(self.light_effect, effect_pos)
+            if circle:
+                surface.blit(self.light_effect, effect_pos)
             surface.blit(new_surface, (0, 0))
